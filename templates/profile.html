@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ffffff;
+            --accent-color: #4facfe;
+            --accent-gradient: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+            --danger-color: #ff5858;
+            --success-color: #00b09b;
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --sidebar-width: 280px;
+            --sidebar-bg: rgba(15, 23, 42, 0.95);
+            --border-color: rgba(255,255,255,0.08);
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--border-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+        .sidebar h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+        .nav-btn {
+            background-color: transparent;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            padding: 15px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            text-align: left;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .nav-btn:hover { 
+            background-color: rgba(255,255,255,0.05); 
+            color: white; 
+            padding-left: 20px;
+            border-left: 3px solid var(--accent-color);
+        }
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - var(--sidebar-width));
+        }
+        .dashboard-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dashboard-header h1 {
+            font-weight: 300;
+            font-size: 2.5rem;
+            margin: 0;
+        }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            max-width: 600px;
+        }
+        .profile-detail {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 10px;
+            text-align: left;
+        }
+        .profile-detail strong {
+            color: var(--accent-color);
+            margin-right: 10px;
+            width: 120px;
+            display: inline-block;
+        }
+        .btn { display: inline-block; margin-top: 20px; text-decoration: none; color: var(--accent-color); font-weight: 600; }
+        .btn:hover { color: white; }
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            margin-right: 10px;
+            transition: transform 0.2s;
+        }
+        .action-btn:hover { transform: translateY(-2px); }
+        .new-btn { background-color: var(--success-color); color: white; }
+        .edit-btn { background-color: var(--accent-color); color: white; }
+        .edit-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 5px 10px; border-radius: 4px; font-family: 'Outfit', sans-serif; font-size: 1rem; width: 200px; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>FallGuard</h2>
+        <a href="{{ url_for('index') }}" class="nav-btn">🏠 Home</a>
+        <a href="/profile" class="nav-btn" style="background-color: rgba(255,255,255,0.05); color: white; border-left: 3px solid var(--accent-color);">👤 Patient Profile</a>
+        <a href="/history" class="nav-btn">📊 View History</a>
+        <a href="/settings" class="nav-btn">⚙️ Settings</a>
+        <a href="{{ url_for('logout') }}" class="nav-btn" style="margin-top: auto; color: var(--danger-color);">🚪 Logout</a>
+    </div>
+
+    <div class="main-content">
+        <div class="dashboard-header">
+            <h1>Patient Profile</h1>
+            <div>
+                <button class="action-btn new-btn" onclick="createNew()">New</button>
+                <button class="action-btn edit-btn" onclick="toggleEdit()" id="editBtn">Edit</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="profile-detail"><strong>Name:</strong> <span id="p-name">John Doe</span></div>
+            <div class="profile-detail"><strong>ID:</strong> <span id="p-id">P-90210</span></div>
+            <div class="profile-detail"><strong>Risk Level:</strong> <span id="p-risk">Moderate</span></div>
+            <div class="profile-detail"><strong>Age:</strong> <span id="p-age">72</span></div>
+            <div class="profile-detail"><strong>Room:</strong> <span id="p-room">304-B</span></div>
+            
+            <a href="{{ url_for('index') }}" class="btn">&larr; Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        let isEditing = false;
+        const fields = ['p-name', 'p-id', 'p-risk', 'p-age', 'p-room'];
+
+        function toggleEdit() {
+            const btn = document.getElementById('editBtn');
+            
+            if (!isEditing) {
+                // Switch to edit mode
+                fields.forEach(id => {
+                    const span = document.getElementById(id);
+                    const val = span.innerText;
+                    span.innerHTML = `<input type="text" class="edit-input" value="${val}">`;
+                });
+                btn.innerText = "Save";
+                btn.style.backgroundColor = "#00b09b"; // Success color
+                isEditing = true;
+            } else {
+                // Save changes
+                fields.forEach(id => {
+                    const span = document.getElementById(id);
+                    const input = span.querySelector('input');
+                    if (input) span.innerText = input.value;
+                });
+                btn.innerText = "Edit";
+                btn.style.backgroundColor = "#4facfe"; // Accent color
+                isEditing = false;
+            }
+        }
+
+        function createNew() {
+            if (!isEditing) {
+                toggleEdit();
+            }
+            fields.forEach(id => {
+                const span = document.getElementById(id);
+                const input = span.querySelector('input');
+                if (input) input.value = "";
+            });
+            
+            // Update button text to indicate new profile creation
+            const btn = document.getElementById('editBtn');
+            btn.innerText = "Save New";
+            
+            document.querySelector('#p-name input').focus();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fall Detection Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ffffff;
+            --accent-color: #4facfe;
+            --accent-gradient: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+            --danger-color: #ff5858;
+            --success-color: #00b09b;
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --sidebar-width: 280px;
+            --sidebar-bg: rgba(15, 23, 42, 0.95);
+            --border-color: rgba(255,255,255,0.08);
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+            min-height: 100vh;
+        }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            text-align: center;
+            transition: transform 0.2s;
+            border: 1px solid var(--border-color);
+        }
+        .card:hover { transform: translateY(-3px); }
+        
+        .status-indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+            display: inline-block;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--success-color);
+        }
+        .status-text { font-size: 1.5rem; font-weight: 600; vertical-align: middle; }
+        .value-display { 
+            font-size: 5rem; 
+            font-weight: 700; 
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 10px 0; 
+        }
+        
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--border-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+        .sidebar h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+        .nav-btn {
+            background-color: transparent;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            padding: 15px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            text-align: left;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .nav-btn:hover { 
+            background-color: rgba(255,255,255,0.05); 
+            color: white; 
+            padding-left: 20px;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - var(--sidebar-width));
+        }
+        
+        .dashboard-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+        }
+        .dashboard-header h1 {
+            font-weight: 300;
+            font-size: 2.5rem;
+            margin: 0;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        /* Popup Styles - Bottom Right */
+        #alert-popup {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #ff5858, #f09819);
+            color: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.4);
+            display: none;
+            z-index: 1000;
+            min-width: 300px;
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(120%); }
+            to { transform: translateX(0); }
+        }
+
+        #alert-popup h3 { margin: 0 0 10px 0; display: flex; align-items: center; }
+        .close-btn { margin-left: auto; cursor: pointer; font-size: 1.2rem; opacity: 0.8; }
+        .close-btn:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>FallGuard</h2>
+        <a href="{{ url_for('index') }}" class="nav-btn" style="background-color: rgba(255,255,255,0.05); color: white; border-left: 3px solid var(--accent-color);">🏠 Home</a>
+        <a href="/profile" class="nav-btn">👤 Patient Profile</a>
+        <a href="/history" class="nav-btn">📊 View History</a>
+        <a href="/settings" class="nav-btn">⚙️ Settings</a>
+        <a href="{{ url_for('logout') }}" class="nav-btn" style="margin-top: auto; color: var(--danger-color);">🚪 Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="dashboard-header">
+            <h1>Dashboard Overview</h1>
+        </div>
+        
+        <div class="dashboard-grid">
+            <!-- Status Card -->
+            <div class="card">
+                <h3>System Status</h3>
+                <div style="margin-top: 20px;">
+                    <span class="status-indicator" id="status-dot"></span>
+                    <span class="status-text" id="status">Initializing...</span>
+                </div>
+            </div>
+
+            <!-- G-Force Card -->
+            <div class="card">
+                <h3>Live Sensor Data</h3>
+                <div class="value-display" id="value">0.00 G</div>
+                <p style="color: rgba(255,255,255,0.5);">Threshold: 3.0 G</p>
+            </div>
+
+            <!-- Chart Card -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>Real-time Activity Monitor</h3>
+                <div style="height: 300px; width: 100%;"><canvas id="sensorChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Popup -->
+    <div id="alert-popup">
+        <h3>⚠️ FALL DETECTED <span class="close-btn" onclick="document.getElementById('alert-popup').style.display='none'">✕</span></h3>
+        <p>High impact force detected. Emergency protocols initiated.</p>
+    </div>
+
+    <script>
+        const socket = io();
+        const statusDot = document.getElementById('status-dot');
+        
+        // Initialize Chart.js
+        const ctx = document.getElementById('sensorChart').getContext('2d');
+        const sensorChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'G-Force',
+                    data: [],
+                    borderColor: '#4facfe',
+                    backgroundColor: 'rgba(79, 172, 254, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false } },
+                layout: { padding: 10 },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: 'rgba(255, 255, 255, 0.6)' },
+                        suggestedMax: 5
+                    }
+                }
+            }
+        });
+        
+        socket.on('connect', function() {
+            console.log("Connected to WebSocket server");
+            document.getElementById('status').innerText = "Connected...";
+        });
+
+        socket.on('connect_error', function(error) {
+            console.error("Connection Error:", error);
+            document.getElementById('status').innerText = "Connection Error";
+        });
+
+        socket.on('update', function(data) {
+            document.getElementById('status').innerText = data.status;
+            document.getElementById('value').innerText = data.value + " G";
+            
+            if (data.status.includes("FALL")) {
+                statusDot.style.backgroundColor = "#ff5858"; // Red
+                statusDot.style.boxShadow = "0 0 15px #ff5858";
+            } else if (data.status === "Sitting") {
+                statusDot.style.backgroundColor = "#4facfe"; // Blue (Accent)
+                statusDot.style.boxShadow = "0 0 10px #4facfe";
+            } else {
+                statusDot.style.backgroundColor = "#00b09b"; // Green
+                statusDot.style.boxShadow = "0 0 10px #00b09b";
+            }
+
+            // Update Chart
+            const now = new Date().toLocaleTimeString();
+            sensorChart.data.labels.push(now);
+            sensorChart.data.datasets[0].data.push(data.value);
+            
+            if (sensorChart.data.labels.length > 30) {
+                sensorChart.data.labels.shift();
+                sensorChart.data.datasets[0].data.shift();
+            }
+            sensorChart.update();
+        });
+
+        socket.on('alert', function(data) {
+            document.getElementById('alert-popup').style.display = "block";
+        });
+    </script>
+</body>
+</html>
